@@ -21,23 +21,62 @@ ui <- fluidPage(
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
+        
         sidebarPanel(
+            
             sliderInput("bins",
                         "Number of bins:",
                         min = 1,
                         max = 50,
-                        value = 30)
+                        value = 30),
+            
+            # Input: Text for providing a caption ----
+            # Note: Changes made to the caption in the textInput control
+            # are updated in the output area immediately as you type
+            textInput(inputId = "caption",
+                      label = "Caption:",
+                      value = "Sample Text"),
+            
+            # Input: Selector for choosing dataset ----
+            # TO DO: Conditional choices
+            selectInput(inputId = "dataset",
+                        label = "Choose a dataset:",
+                        choices = c("rock", "pressure", "cars")),
+            
+            # Input: Numeric entry for number of obs to view ----
+            numericInput(inputId = "obs",
+                         label = "Number of observations to view:",
+                         value = 10)
         ),
 
         # Show a plot of the generated distribution
         mainPanel(
-           plotOutput("distPlot")
+            
+            # Output: Formatted text for caption ----
+            h3(textOutput("caption", container = span)),
+            
+            plotOutput("distPlot")
         )
     )
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output) {      
+    
+    # Create caption ----
+    # The output$caption is computed based on a reactive expression
+    # that returns input$caption. When the user changes the
+    # "caption" field:
+    #
+    # 1. This function is automatically called to recompute the output
+    # 2. New caption is pushed back to the browser for re-display
+    #
+    # Note that because the data-oriented reactive expressions
+    # below don't depend on input$caption, those expressions are
+    # NOT called when input$caption changes
+    output$caption <- renderText({
+        input$caption
+    })
 
     output$distPlot <- renderPlot({
         # generate bins based on input$bins from ui.R
