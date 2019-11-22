@@ -16,12 +16,23 @@ main_data <- polls538 %>%
                select(question_id,poll_id,pollster,end_date,candidate_name,pct) %>%
                filter(poll_id==62715)
 
+main_data_new <- main_data %>%
+                 filter(pct>3)
+
+remaining <- (100-sum(main_data_new$pct))
+even_split_remaining <- remaining/count(main_data_new)[[1]]
+
+main_data$pct_new <- main_data$pct + (main_data$pct>=3)*even_split_remaining
+
 #Plot results for each candidate
+cutoff <- data.frame(yintercept=3, cutoff=factor(3))
 ggplot(data = main_data) +
-  aes(x = candidate_name, y=pct) +
-  geom_point() +
+  geom_point(aes(x = candidate_name, y=pct)) +
+  geom_point(aes(x = candidate_name, y=pct_new)) +
   theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  geom_hline(aes(yintercept=yintercept, linetype=cutoff), data=cutoff,show.legend = FALSE) 
+
 
 # TO DO:
 # - Take this basic concept and port to Shiny. Add:
