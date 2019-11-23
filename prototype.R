@@ -27,8 +27,8 @@ main_data$pct_new <- main_data$pct + (main_data$pct>=3)*even_split_remaining
 #Plot results for each candidate
 cutoff <- data.frame(yintercept=3, cutoff=factor(3))
 ggplot(data = main_data) +
-  geom_point(aes(x = candidate_name, y=pct)) +
-  geom_point(aes(x = candidate_name, y=pct_new)) +
+  geom_point(colour="black",fill="black", shape=21, size = 1,aes(x = candidate_name, y=pct)) +
+  geom_point(colour="blue",fill="blue", shape=22, size = 1,aes(x = candidate_name, y=pct_new)) +
   theme_minimal() + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   geom_hline(aes(yintercept=yintercept, linetype=cutoff), data=cutoff,show.legend = FALSE) 

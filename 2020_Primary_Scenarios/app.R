@@ -12,41 +12,39 @@
 # 
 
 library(shiny)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+
+# Read data in from 538
+polls538 <- read.csv(url("https://projects.fivethirtyeight.com/polls-page/president_primary_polls.csv")) %>%
+    filter(party=="DEM") %>%
+    filter(cycle==2020)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
     # Application title
-    titlePanel("Old Faithful Geyser Data"),
+    titlePanel("2020 Democratic Primary Scenarios"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         
         sidebarPanel(
             
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30),
-            
-            # Input: Text for providing a caption ----
-            # Note: Changes made to the caption in the textInput control
-            # are updated in the output area immediately as you type
-            textInput(inputId = "caption",
-                      label = "Caption:",
-                      value = "Sample Text"),
+            sliderInput("cutoff",
+                        "Minimum poll cutoff:",
+                        min = 0,
+                        max = 20,
+                        value = 3),
             
             # Input: Selector for choosing dataset ----
             # TO DO: Conditional choices
-            selectInput(inputId = "dataset",
-                        label = "Choose a dataset:",
-                        choices = c("rock", "pressure", "cars")),
+            selectInput(inputId = "poll",
+                        label = "Choose a poll:",
+                        choices = unique(polls538$poll_id)),
             
-            # Input: Numeric entry for number of obs to view ----
-            numericInput(inputId = "obs",
-                         label = "Number of observations to view:",
-                         value = 10)
         ),
 
         # Show a plot of the generated distribution
@@ -55,7 +53,7 @@ ui <- fluidPage(
             # Output: Formatted text for caption ----
             h3(textOutput("caption", container = span)),
             
-            plotOutput("distPlot")
+            plotlyOutput("resultPlot")
         )
     )
 )
@@ -78,13 +76,29 @@ server <- function(input, output) {
         input$caption
     })
 
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white')
+    output$resultPlot <- renderPlotly({
+        # generate bins based on input$bins from ui.R 
+        
+        main_data <- polls538 %>%
+            filter(poll_id==input$poll)
+            
+        main_data_new <- main_data %>%
+            filter(pct>input$cutoff) 
+        
+        remaining <- (100-sum(main_data_new$pct))
+        even_split_remaining <- remaining/count(main_data_new)[[1]]
+        
+        main_data$pct_new <- main_data$pct + (main_data$pct>=input$cutoff)*even_split_remaining
+        
+        #Plot results for each candidate
+        cutoff <- data.frame(yintercept=input$cutoff, cutoff=factor(input$cutoff))
+        ggplot(data = main_data) +
+            geom_point(colour="black",fill="black", shape=21, size = 1, aes(x = candidate_name, y=pct)) +
+            geom_point(colour="blue",fill="blue", shape=22, size = 1,aes(x = candidate_name, y=pct_new)) +
+            theme_minimal() + 
+            theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+            geom_hline(aes(yintercept=yintercept, linetype=cutoff), data=cutoff,show.legend = FALSE) 
+        
     })
 }
 
