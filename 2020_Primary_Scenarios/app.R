@@ -3,12 +3,6 @@
 # Currently it is just the sample Shiny web application. You can run the application by clicking
 # the 'Run App' button above (in RStudio).
 #
-# TO DO:
-#   - See prototype.R for inputs and graphic
-#   - Need interaction for:
-#    1. Ability to customize which poll you use
-#    2. Threshold below which candidates drop
-#    3. Potential Reallocation rules
 # 
 
 library(shiny)
@@ -34,34 +28,39 @@ ui <- fluidPage(
         
         sidebarPanel(
             
+            
+            # Input: Selector for choosing poll ----
+            selectInput(inputId = "poll",
+                        label = "What would a poll (select) look like...",
+                        choices = unique(polls538$poll_summary)),
+            
             # Input: Minimum cutoff for reallocation ----
             sliderInput("cutoff",
-                        "Minimum poll cutoff:",
+                        "if all candidates below a minimum cutoff (select) were removed...",
                         min = 0,
                         max = 25,
                         value = 3),
             
-            # Input: Selector for choosing poll ----
-            selectInput(inputId = "poll",
-                        label = "Choose a poll:",
-                        choices = unique(polls538$poll_summary)),
             
             # Input: Selector for reallocation method ----
             selectInput(inputId = "reallocMethod",
-                        label = "How should it be reallocated:",
-                        choices = c("even","all to selected remaining candidate")),
+                        label = "and the shares were reallocated...",
+                        choices = c("evenly","all to a single candidate...")),
             
-            # Input: Selector for choosing reallocation candidate ----
-            selectInput(inputId = "selectedCandidate",
-                        label = "Choose a candidate among the remaining:",
+           # Input: Selector for choosing reallocation candidate ----
+           selectInput(inputId = "selectedCandidate",
+                        label = "[IF 'all to...']",
                         choices = unique(polls538$candidate_name)),
-            
+
         ),
 
         # Show a plot of the generated distribution
         mainPanel(
             
-            plotlyOutput("resultPlot")
+            plotlyOutput("resultPlot"),
+            
+            tags$a(href="https://projects.fivethirtyeight.com/polls/president-primary-d/","Source: FiveThirtyEight Latest Polls")
+            
         )
     )
 )
@@ -91,19 +90,28 @@ server <- function(input, output, session) {
         remaining <- (100-sum(main_data_new$pct))
         even_split_remaining <- remaining/count(main_data_new)[[1]]
         
-        if (input$reallocMethod == "even") {
+        if (input$reallocMethod == "evenly") {
             main_data$pct_new <- main_data$pct + (main_data$pct>=input$cutoff)*even_split_remaining
-        } else if (input$reallocMethod == "all to selected remaining candidate") {
+        } else if (input$reallocMethod == "all to a single candidate...") {
             main_data$pct_new <- main_data$pct + (main_data$candidate_name==input$selectedCandidate)*remaining
         }
         main_data$pct_new[main_data$pct<input$cutoff] <- NA
         
+        orig <- main_data[,c("candidate_name","pct")]
+        orig$type <- "Raw"
+        new <- main_data[,c("candidate_name","pct_new")]
+        names(new) <- c("candidate_name","pct")
+        new$type <- "Reallocated"
+
+        plot_data <- rbind(orig,new)
+        
         #Plot results for each candidate
         cutoff <- data.frame(yintercept=input$cutoff, cutoff=factor(input$cutoff))
-        ggplot(data = main_data) +
-            geom_point(colour="black",fill="black", shape=21, size = 1, aes(x = candidate_name, y=pct)) +
-            geom_point(colour="blue",fill="blue", shape=22, size = 1,aes(x = candidate_name, y=pct_new)) +
+        ggplot(data = plot_data,aes(y = pct, x = candidate_name, 
+                                    shape=type, colour=type)) +
+            geom_point() +
             theme_minimal() + 
+            labs(x="Candidates",y="Poll Result (%)",title="Poll Results") +
             theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
             geom_hline(aes(yintercept=yintercept, linetype=cutoff), data=cutoff,show.legend = FALSE) 
         

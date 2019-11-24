@@ -28,20 +28,22 @@ main_data$pct_new <- main_data$pct + (main_data$pct>=3)*even_split_remaining
 main_data$pct_new <- main_data$pct + (main_data$candidate_name==remaining_candidates[3])*remaining
 main_data$pct_new[main_data$pct<3] <- NA
 
+orig <- main_data[,c("candidate_name","pct")]
+orig$type <- "Raw"
+new <- main_data[,c("candidate_name","pct_new")]
+names(new) <- c("candidate_name","pct")
+new$type <- "Reallocated"
+
+plot_data <- rbind(orig,new)
 
 #Plot results for each candidate
 cutoff <- data.frame(yintercept=3, cutoff=factor(3))
-ggplot(data = main_data) +
-  geom_point(colour="black",fill="black", shape=21, size = 1,aes(x = candidate_name, y=pct)) +
-  geom_point(colour="blue",fill="blue", shape=22, size = 1,aes(x = candidate_name, y=pct_new)) +
+ggplot(data = plot_data,aes(y = pct, x = candidate_name, 
+                            shape=type, colour=type)) +
+  geom_point() +
   theme_minimal() + 
+  labs(x="Candidates",y="Poll Result (%)",title="Poll Results",
+       caption = "Source: FiveThirtyEight Latest Polls - https://projects.fivethirtyeight.com/polls/president-primary-d/") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   geom_hline(aes(yintercept=yintercept, linetype=cutoff), data=cutoff,show.legend = FALSE) 
 
-
-# TO DO:
-# - Take this basic concept and port to Shiny. Add:
-#    1. Ability to customize which poll you use
-#    2. Threshold below which candidates drop
-#    3. Potential Reallocation rules
-#    4. Graph labeling
