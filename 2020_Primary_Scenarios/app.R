@@ -20,7 +20,8 @@ library(plotly)
 # Read data in from 538
 polls538 <- read.csv(url("https://projects.fivethirtyeight.com/polls-page/president_primary_polls.csv")) %>%
     filter(party=="DEM") %>%
-    filter(cycle==2020)
+    filter(cycle==2020) %>%
+    unite("poll_summary", c("start_date","end_date","pollster","sponsors","fte_grade"), sep = " ", remove = FALSE)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -33,62 +34,68 @@ ui <- fluidPage(
         
         sidebarPanel(
             
+            # Input: Minimum cutoff for reallocation ----
             sliderInput("cutoff",
                         "Minimum poll cutoff:",
                         min = 0,
                         max = 25,
                         value = 3),
             
-            # Input: Selector for choosing dataset ----
-            # TO DO: Conditional choices
+            # Input: Selector for choosing poll ----
             selectInput(inputId = "poll",
                         label = "Choose a poll:",
-                        choices = unique(polls538$poll_id)),
+                        choices = unique(polls538$poll_summary)),
+            
+            # Input: Selector for reallocation method ----
+            selectInput(inputId = "reallocMethod",
+                        label = "How should it be reallocated:",
+                        choices = c("even","all to selected remaining candidate")),
+            
+            # Input: Selector for choosing reallocation candidate ----
+            selectInput(inputId = "selectedCandidate",
+                        label = "Choose a candidate among the remaining:",
+                        choices = unique(polls538$candidate_name)),
             
         ),
 
         # Show a plot of the generated distribution
         mainPanel(
             
-            # Output: Formatted text for caption ----
-            h3(textOutput("caption", container = span)),
-            
             plotlyOutput("resultPlot")
         )
     )
 )
 
-# Define server logic required to draw a histogram
-server <- function(input, output, session) {      
+# Define server logic required to draw poll results under scenarios
+server <- function(input, output, session) { 
     
-    # Create caption ----
-    # The output$caption is computed based on a reactive expression
-    # that returns input$caption. When the user changes the
-    # "caption" field:
-    #
-    # 1. This function is automatically called to recompute the output
-    # 2. New caption is pushed back to the browser for re-display
-    #
-    # Note that because the data-oriented reactive expressions
-    # below don't depend on input$caption, those expressions are
-    # NOT called when input$caption changes
-    output$caption <- renderText({
-        input$caption
+    get_ddf <- reactive({
+        polls538 %>%
+            filter(poll_summary==input$poll) %>%
+            filter(pct>input$cutoff) 
     })
+    
+    observe({
+        updateSelectInput(session, 'selectedCandidate', choices   =levels(droplevels(get_ddf()$candidate_name)) )
+    })
+        
 
     output$resultPlot <- renderPlotly({
-        # generate bins based on input$bins from ui.R 
         
         main_data <- polls538 %>%
-            filter(poll_id==input$poll)
-            
+                     filter(poll_summary==input$poll)
+        
         main_data_new <- main_data %>%
-            filter(pct>input$cutoff) 
+                         filter(pct>input$cutoff) 
         
         remaining <- (100-sum(main_data_new$pct))
         even_split_remaining <- remaining/count(main_data_new)[[1]]
         
-        main_data$pct_new <- main_data$pct + (main_data$pct>=input$cutoff)*even_split_remaining
+        if (input$reallocMethod == "even") {
+            main_data$pct_new <- main_data$pct + (main_data$pct>=input$cutoff)*even_split_remaining
+        } else if (input$reallocMethod == "all to selected remaining candidate") {
+            main_data$pct_new <- main_data$pct + (main_data$candidate_name==input$selectedCandidate)*remaining
+        }
         main_data$pct_new[main_data$pct<input$cutoff] <- NA
         
         #Plot results for each candidate
