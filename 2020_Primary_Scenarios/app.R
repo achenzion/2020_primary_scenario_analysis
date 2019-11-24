@@ -36,7 +36,7 @@ ui <- fluidPage(
             sliderInput("cutoff",
                         "Minimum poll cutoff:",
                         min = 0,
-                        max = 20,
+                        max = 25,
                         value = 3),
             
             # Input: Selector for choosing dataset ----
@@ -59,7 +59,7 @@ ui <- fluidPage(
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {      
+server <- function(input, output, session) {      
     
     # Create caption ----
     # The output$caption is computed based on a reactive expression
@@ -89,6 +89,7 @@ server <- function(input, output) {
         even_split_remaining <- remaining/count(main_data_new)[[1]]
         
         main_data$pct_new <- main_data$pct + (main_data$pct>=input$cutoff)*even_split_remaining
+        main_data$pct_new[main_data$pct<input$cutoff] <- NA
         
         #Plot results for each candidate
         cutoff <- data.frame(yintercept=input$cutoff, cutoff=factor(input$cutoff))
@@ -100,6 +101,8 @@ server <- function(input, output) {
             geom_hline(aes(yintercept=yintercept, linetype=cutoff), data=cutoff,show.legend = FALSE) 
         
     })
+    
+    session$onSessionEnded(stopApp)
 }
 
 # Run the application 

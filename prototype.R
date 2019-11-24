@@ -22,7 +22,12 @@ main_data_new <- main_data %>%
 remaining <- (100-sum(main_data_new$pct))
 even_split_remaining <- remaining/count(main_data_new)[[1]]
 
+remaining_candidates <- unique(main_data_new$candidate_name)
+
 main_data$pct_new <- main_data$pct + (main_data$pct>=3)*even_split_remaining
+main_data$pct_new <- main_data$pct + (main_data$candidate_name==remaining_candidates[3])*remaining
+main_data$pct_new[main_data$pct<3] <- NA
+
 
 #Plot results for each candidate
 cutoff <- data.frame(yintercept=3, cutoff=factor(3))
