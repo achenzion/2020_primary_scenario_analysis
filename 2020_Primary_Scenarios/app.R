@@ -87,7 +87,7 @@ server <- function(input, output, session) {
         main_data_new <- main_data %>%
                          filter(pct>input$cutoff) 
         
-        remaining <- (100-sum(main_data_new$pct))
+        remaining <- (sum(main_data$pct)-sum(main_data_new$pct))
         even_split_remaining <- remaining/count(main_data_new)[[1]]
         
         if (input$reallocMethod == "evenly") {
