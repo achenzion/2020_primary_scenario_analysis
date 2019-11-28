@@ -10,6 +10,15 @@ library(ggplot2)
 polls538 <- read.csv(url("https://projects.fivethirtyeight.com/polls-page/president_primary_polls.csv"))
 
 #Filter data to relevant polls
+main_data0 <- polls538 %>%
+  filter(party=="DEM") %>%
+  filter(cycle==2020) %>%
+  filter(end_date == "11/21/19") %>%
+  filter(state == "")
+
+count(main_data0)
+count(distinct(main_data0))
+#Filter data to relevant polls
 main_data <- polls538 %>%
                filter(party=="DEM") %>%
                filter(cycle==2020) %>%

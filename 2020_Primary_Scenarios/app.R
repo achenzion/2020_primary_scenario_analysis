@@ -17,7 +17,7 @@ library(plotly)
 polls538 <- read.csv(url("https://projects.fivethirtyeight.com/polls-page/president_primary_polls.csv")) %>%
     filter(party=="DEM") %>%
     filter(cycle==2020) %>%
-    unite("poll_summary", c("start_date","end_date","pollster","sponsors","fte_grade"), sep = " ", remove = FALSE)
+    unite("poll_summary", c("start_date","end_date","pollster","sponsors","fte_grade","state","question_id"), sep = " ", remove = FALSE)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -120,12 +120,12 @@ server <- function(input, output, session) {
         #Plot results for each candidate
         cutoff <- data.frame(yintercept=input$cutoff, cutoff=factor(input$cutoff))
         ggplot(data = plot_data(),aes(y = pct, x = candidate_name, 
-                                    shape=type, colour=type)) +
+                                    shape=type, colour=type),show.legend = FALSE) +
             geom_point() + 
             theme_minimal() + 
             labs(x="Candidates",y="Poll Result (%)",title="Poll Results") +
             theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-            geom_hline(aes(yintercept=yintercept, linetype=cutoff), data=cutoff) 
+            geom_hline(aes(yintercept=yintercept, linetype=cutoff), data=cutoff,show.legend = FALSE) 
         
     })
     
