@@ -6,6 +6,8 @@
 # 
 
 library(shiny)
+library(shinydashboard)
+library(shinyjs)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
@@ -28,6 +30,7 @@ ui <- fluidPage(
         
         sidebarPanel(
             
+            useShinyjs(),
             
             # Input: Selector for choosing poll ----
             selectInput(inputId = "poll",
@@ -47,11 +50,12 @@ ui <- fluidPage(
                         label = "and the shares were reallocated...",
                         choices = c("evenly","all to a single candidate...")),
             
-           # Input: Selector for choosing reallocation candidate ----
-           selectInput(inputId = "selectedCandidate",
-                        label = "[IF 'all to...']",
+            box(id = "candidateBox", width = '800px',
+                # Input: Selector for choosing reallocation candidate ----
+                selectInput(inputId = "selectedCandidate",
+                        label = "",
                         choices = unique(polls538$candidate_name)),
-
+            ),
         ),
 
         # Show a plot of the generated distribution
@@ -115,6 +119,16 @@ server <- function(input, output, session) {
             theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
             geom_hline(aes(yintercept=yintercept, linetype=cutoff), data=cutoff,show.legend = FALSE) 
         
+    })
+    
+    ## observe if selector is correct for toggling candidate box
+    observeEvent(input$reallocMethod, {
+        
+        if (input$reallocMethod == "all to a single candidate...") {
+            shinyjs::show(id = "candidateBox")
+        } else {
+            shinyjs::hide(id = "candidateBox")
+        }
     })
     
     session$onSessionEnded(stopApp)
