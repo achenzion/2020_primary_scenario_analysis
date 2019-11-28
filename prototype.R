@@ -3,6 +3,8 @@ library(dplyr)
 library(ggplot2)
 
 # This file is meant to prototype the raw data access and graphing capabilities
+# This file is not used in the final application.
+# see ./2020_Primary_Scenarios/app.R for application
 
 # Read data in from 538
 polls538 <- read.csv(url("https://projects.fivethirtyeight.com/polls-page/president_primary_polls.csv"))
@@ -34,7 +36,8 @@ new <- main_data[,c("candidate_name","pct_new")]
 names(new) <- c("candidate_name","pct")
 new$type <- "Reallocated"
 
-plot_data <- rbind(orig,new)
+plot_data <- rbind(orig,new)  %>%
+  arrange(pct)
 
 #Plot results for each candidate
 cutoff <- data.frame(yintercept=3, cutoff=factor(3))

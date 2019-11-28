@@ -58,12 +58,16 @@ ui <- fluidPage(
             ),
         ),
 
-        # Show a plot of the generated distribution
         mainPanel(
-            
+      
+            # Show a plot of the generated distribution
             plotlyOutput("resultPlot"),
             
+            # Output: HTML table with requested number of observations ----
+            tableOutput("view"),
+            
             tags$a(href="https://projects.fivethirtyeight.com/polls/president-primary-d/","Source: FiveThirtyEight Latest Polls")
+            
             
         )
     )
@@ -72,24 +76,24 @@ ui <- fluidPage(
 # Define server logic required to draw poll results under scenarios
 server <- function(input, output, session) { 
     
-    get_ddf <- reactive({
+    main_data <- reactive({
         polls538 %>%
-            filter(poll_summary==input$poll) %>%
+            filter(poll_summary==input$poll) 
+    })
+    
+    main_data_new <- reactive({
+        main_data() %>%
             filter(pct>input$cutoff) 
     })
     
     observe({
-        updateSelectInput(session, 'selectedCandidate', choices   =levels(droplevels(get_ddf()$candidate_name)) )
+        updateSelectInput(session, 'selectedCandidate', choices   =levels(droplevels(main_data_new()$candidate_name)) )
     })
-        
-
-    output$resultPlot <- renderPlotly({
-        
-        main_data <- polls538 %>%
-                     filter(poll_summary==input$poll)
-        
-        main_data_new <- main_data %>%
-                         filter(pct>input$cutoff) 
+    
+    
+    plot_data <- reactive({
+        main_data <- main_data()
+        main_data_new <- main_data_new()
         
         remaining <- (sum(main_data$pct)-sum(main_data_new$pct))
         even_split_remaining <- remaining/count(main_data_new)[[1]]
@@ -106,19 +110,32 @@ server <- function(input, output, session) {
         new <- main_data[,c("candidate_name","pct_new")]
         names(new) <- c("candidate_name","pct")
         new$type <- "Reallocated"
-
-        plot_data <- rbind(orig,new)
+        
+        rbind(orig,new)
+        
+    })
+    
+    output$resultPlot <- renderPlotly({
         
         #Plot results for each candidate
         cutoff <- data.frame(yintercept=input$cutoff, cutoff=factor(input$cutoff))
-        ggplot(data = plot_data,aes(y = pct, x = candidate_name, 
+        ggplot(data = plot_data(),aes(y = pct, x = candidate_name, 
                                     shape=type, colour=type)) +
-            geom_point() +
+            geom_point() + 
             theme_minimal() + 
             labs(x="Candidates",y="Poll Result (%)",title="Poll Results") +
             theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-            geom_hline(aes(yintercept=yintercept, linetype=cutoff), data=cutoff,show.legend = FALSE) 
+            geom_hline(aes(yintercept=yintercept, linetype=cutoff), data=cutoff) 
         
+    })
+    
+    # Show the first "n" observations ----
+    output$view <- renderTable({
+        plot_data() %>%
+            pivot_wider(names_from = type, values_from = pct) %>%
+            arrange(desc(Reallocated)) %>%
+            rename(Candidate = candidate_name)
+            
     })
     
     ## observe if selector is correct for toggling candidate box
