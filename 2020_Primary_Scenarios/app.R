@@ -99,11 +99,11 @@ server <- function(input, output, session) {
         even_split_remaining <- remaining/count(main_data_new)[[1]]
         
         if (input$reallocMethod == "evenly") {
-            main_data$pct_new <- main_data$pct + (main_data$pct>=input$cutoff)*even_split_remaining
+            main_data$pct_new <- main_data$pct + (main_data$pct>input$cutoff)*even_split_remaining
         } else if (input$reallocMethod == "all to a single candidate...") {
             main_data$pct_new <- main_data$pct + (main_data$candidate_name==input$selectedCandidate)*remaining
         }
-        main_data$pct_new[main_data$pct<input$cutoff] <- NA
+        main_data$pct_new[main_data$pct<=input$cutoff] <- NA
         
         orig <- main_data[,c("candidate_name","pct")]
         orig$type <- "Raw"
