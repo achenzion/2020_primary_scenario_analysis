@@ -47,8 +47,8 @@ ui <- fluidPage(
             
             # Input: Selector for reallocation method ----
             selectInput(inputId = "reallocMethod",
-                        label = "and the shares were reallocated...",
-                        choices = c("evenly","all to a single candidate...")),
+                        label = "and the poll responses were reallocated (select) ...",
+                        choices = c("evenly","to a single candidate (select)...")),
             
             box(id = "candidateBox", width = '800px',
                 # Input: Selector for choosing reallocation candidate ----
@@ -56,6 +56,16 @@ ui <- fluidPage(
                         label = "",
                         choices = unique(polls538$candidate_name)),
             ),
+            
+            tags$p(
+              tags$a(href="https://projects.fivethirtyeight.com/polls/president-primary-d/","Source: FiveThirtyEight Latest Polls\n"),
+            ),
+            
+            tags$p(
+              tags$a(href="https://github.com/achenzion/2020_primary_scenario_analysis","Code available in Git (contributions welcome)\n"),
+            ),
+            
+            tags$p("Copyright (c) 2019 Ayal Chen-Zion")
         ),
 
         mainPanel(
@@ -65,9 +75,6 @@ ui <- fluidPage(
             
             # Output: HTML table with requested number of observations ----
             tableOutput("view"),
-            
-            tags$a(href="https://projects.fivethirtyeight.com/polls/president-primary-d/","Source: FiveThirtyEight Latest Polls")
-            
             
         )
     )
@@ -100,15 +107,20 @@ server <- function(input, output, session) {
         
         if (input$reallocMethod == "evenly") {
             main_data$pct_new <- main_data$pct + (main_data$pct>input$cutoff)*even_split_remaining
-        } else if (input$reallocMethod == "all to a single candidate...") {
+        } else if (input$reallocMethod == "to a single candidate (select)...") {
             main_data$pct_new <- main_data$pct + (main_data$candidate_name==input$selectedCandidate)*remaining
         }
         main_data$pct_new[main_data$pct<=input$cutoff] <- NA
         
-        orig <- main_data[,c("candidate_name","pct")]
+        ordered_names <- main_data[order(desc(main_data$pct_new)),]$candidate_name
+        
+        main_data$candidate_name2 <- factor(main_data$candidate_name, 
+                                            levels = ordered_names)
+        
+        orig <- main_data[,c("candidate_name2","pct")]
         orig$type <- "Raw"
-        new <- main_data[,c("candidate_name","pct_new")]
-        names(new) <- c("candidate_name","pct")
+        new <- main_data[,c("candidate_name2","pct_new")]
+        names(new) <- c("candidate_name2","pct")
         new$type <- "Reallocated"
         
         rbind(orig,new)
@@ -119,13 +131,14 @@ server <- function(input, output, session) {
         
         #Plot results for each candidate
         cutoff <- data.frame(yintercept=input$cutoff, cutoff=factor(input$cutoff))
-        ggplot(data = plot_data(),aes(y = pct, x = candidate_name, 
+        ggplot(data = plot_data(),aes(y = pct, x = candidate_name2, 
                                     shape=type, colour=type),show.legend = FALSE) +
             geom_point() + 
             theme_minimal() + 
-            labs(x="Candidates",y="Poll Result (%)",title="Poll Results") +
+            labs(x="Candidates",y="Poll Result (%)",title="Poll Results",shape="",colour="") +
             theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-            geom_hline(aes(yintercept=yintercept, linetype=cutoff), data=cutoff,show.legend = FALSE) 
+            geom_hline(yintercept=input$cutoff) +
+            theme(legend.position = 'top')
         
     })
     
@@ -134,14 +147,14 @@ server <- function(input, output, session) {
         plot_data() %>%
             pivot_wider(names_from = type, values_from = pct) %>%
             arrange(desc(Reallocated)) %>%
-            rename(Candidate = candidate_name)
+            rename(Candidate = candidate_name2)
             
     })
     
     ## observe if selector is correct for toggling candidate box
     observeEvent(input$reallocMethod, {
         
-        if (input$reallocMethod == "all to a single candidate...") {
+        if (input$reallocMethod == "to a single candidate (select)...") {
             shinyjs::show(id = "candidateBox")
         } else {
             shinyjs::hide(id = "candidateBox")
