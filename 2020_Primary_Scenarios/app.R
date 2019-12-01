@@ -32,10 +32,7 @@ ui <- fluidPage(
             
             useShinyjs(),
             
-            # Input: Selector for choosing poll ----
-            selectInput(inputId = "poll",
-                        label = "What would a poll (select) look like...",
-                        choices = unique(polls538$poll_summary)),
+            tags$p("All the media coverage on who is winning the 2020 Democratic primary had me wondering..."),
             
             # Input: Minimum cutoff for reallocation ----
             sliderInput("cutoff",
@@ -48,7 +45,7 @@ ui <- fluidPage(
             # Input: Selector for reallocation method ----
             selectInput(inputId = "reallocMethod",
                         label = "and the poll responses were reallocated (select) ...",
-                        choices = c("evenly","to a single candidate (select)...")),
+                        choices = c("to a single candidate (select)...","evenly")),
             
             box(id = "candidateBox", width = '800px',
                 # Input: Selector for choosing reallocation candidate ----
@@ -57,15 +54,16 @@ ui <- fluidPage(
                         choices = unique(polls538$candidate_name)),
             ),
             
+            tags$p("who could hypothetically lead in the primary?"),
+            
+            # Input: Selector for choosing poll ----
+            selectInput(inputId = "poll",
+                        label = "Try out the scenarios using the latest polls (select)",
+                        choices = unique(polls538$poll_summary)),
+            
             tags$p(
               tags$a(href="https://projects.fivethirtyeight.com/polls/president-primary-d/","Source: FiveThirtyEight Latest Polls\n"),
             ),
-            
-            tags$p(
-              tags$a(href="https://github.com/achenzion/2020_primary_scenario_analysis","Code available in Git (contributions welcome)\n"),
-            ),
-            
-            tags$p("Copyright (c) 2019 Ayal Chen-Zion")
         ),
 
         mainPanel(
@@ -75,6 +73,12 @@ ui <- fluidPage(
             
             # Output: HTML table with requested number of observations ----
             tableOutput("view"),
+            
+            tags$p(
+              tags$a(href="https://github.com/achenzion/2020_primary_scenario_analysis","Code available in Git (contributions welcome)\n"),
+            ),
+            
+            tags$p("Copyright (c) 2019 Ayal Chen-Zion")
             
         )
     )
@@ -118,10 +122,12 @@ server <- function(input, output, session) {
                                             levels = ordered_names)
         
         orig <- main_data[,c("candidate_name2","pct")]
-        orig$type <- "Raw"
+        orig$type <- "Original"
+        orig$rank <- order(desc(main_data$pct))
         new <- main_data[,c("candidate_name2","pct_new")]
         names(new) <- c("candidate_name2","pct")
-        new$type <- "Reallocated"
+        new$type <- "New"
+        new$rank <- order(desc(main_data$pct_new))
         
         rbind(orig,new)
         
@@ -145,9 +151,13 @@ server <- function(input, output, session) {
     # Show the first "n" observations ----
     output$view <- renderTable({
         plot_data() %>%
-            pivot_wider(names_from = type, values_from = pct) %>%
-            arrange(desc(Reallocated)) %>%
-            rename(Candidate = candidate_name2)
+            pivot_wider(names_from = type, values_from = c(pct,rank)) %>%
+            select(candidate_name2,rank_Original,pct_Original,pct_New) %>%
+            rename(Candidate = candidate_name2) %>%
+            rename(Original = pct_Original) %>%
+            rename(New = pct_New) %>%
+            rename('Original Rank' = rank_Original) %>%
+            arrange(desc(New))
             
     })
     
