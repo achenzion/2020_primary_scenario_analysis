@@ -54,7 +54,7 @@ ui <- fluidPage(
                         choices = unique(polls538$candidate_name)),
             ),
             
-            tags$p("who could hypothetically lead in the primary?"),
+            tags$p("who would lead in the primary?"),
             
             # Input: Selector for choosing poll ----
             selectInput(inputId = "poll",
@@ -89,7 +89,8 @@ server <- function(input, output, session) {
     
     main_data <- reactive({
         polls538 %>%
-            filter(poll_summary==input$poll) 
+            filter(poll_summary==input$poll)  %>%
+            arrange(desc(pct))
     })
     
     main_data_new <- reactive({
