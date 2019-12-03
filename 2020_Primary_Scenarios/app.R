@@ -17,7 +17,8 @@ library(plotly)
 polls538 <- read.csv(url("https://projects.fivethirtyeight.com/polls-page/president_primary_polls.csv")) %>%
     filter(party=="DEM") %>%
     filter(cycle==2020) %>%
-    unite("poll_summary", c("start_date","end_date","pollster","sponsors","fte_grade","state","question_id"), sep = " ", remove = FALSE)
+    filter(state=="") %>%
+    unite("poll_summary", c("start_date","end_date","pollster","sponsors","question_id"), sep = " ", remove = FALSE)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -58,7 +59,7 @@ ui <- fluidPage(
             
             # Input: Selector for choosing poll ----
             selectInput(inputId = "poll",
-                        label = "Try out the scenarios using the latest polls (select)",
+                        label = "Try out the scenarios using the latest national polls (select)",
                         choices = unique(polls538$poll_summary)),
             
             tags$p(
@@ -78,7 +79,9 @@ ui <- fluidPage(
               tags$a(href="https://github.com/achenzion/2020_primary_scenario_analysis","Code available in Git (contributions welcome)\n"),
             ),
             
-            tags$p("Copyright (c) 2019 Ayal Chen-Zion")
+            tags$p(
+              tags$a(href="http://achenzion.github.io/","Copyright (c) 2019 Ayal Chen-Zion\n"),
+            ),
             
         )
     )
